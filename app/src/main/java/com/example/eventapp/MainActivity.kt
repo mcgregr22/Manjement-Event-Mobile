@@ -45,13 +45,13 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    MainScreen(
+                    ModernMainScreen(
                         events = eventsState.value,
                         loading = loadingState.value,
                         error = errorState.value,
                         onRefresh = { loadEvents() },
                         onCreateEvent = { request -> createEvent(request) },
-                        onUpdateEvent = { id, request -> updateEvent(id, request) }, // ⬅️ baru
+                        onUpdateEvent = { id, request -> updateEvent(id, request) }, // kalau sudah buat fungsi updateEvent
                         onDeleteEvent = { event ->
                             event.id?.let { deleteEvent(it) }
                         }
