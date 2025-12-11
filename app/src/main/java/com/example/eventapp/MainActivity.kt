@@ -1,9 +1,12 @@
 package com.example.eventapp
 
+import android.app.DatePickerDialog
+import android.app.TimePickerDialog
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -12,6 +15,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.eventapp.Network.ApiClient
 import com.example.eventapp.Model.ApiResponse
@@ -21,6 +25,7 @@ import com.example.eventapp.ui.theme.EventappTheme
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import java.util.Calendar
 
 class MainActivity : ComponentActivity() {
 
@@ -31,7 +36,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // ambil data dari API saat app dibuka
+        // ambil data ketika app dibuka
         loadEvents()
 
         setContent {
@@ -105,8 +110,7 @@ class MainActivity : ComponentActivity() {
                     if (response.isSuccessful) {
                         val body = response.body()
                         Log.d("API", "Create OK: ${body?.message}")
-                        // refresh list setelah tambah
-                        loadEvents()
+                        loadEvents()   // refresh list setelah tambah
                     } else {
                         val msg = "Gagal create: ${response.code()}"
                         errorState.value = msg
@@ -139,8 +143,7 @@ class MainActivity : ComponentActivity() {
                     if (response.isSuccessful) {
                         val body = response.body()
                         Log.d("API", "Delete OK: ${body?.message}")
-                        // refresh list setelah hapus
-                        loadEvents()
+                        loadEvents()   // refresh list setelah hapus
                     } else {
                         val msg = "Gagal delete: ${response.code()}"
                         errorState.value = msg
@@ -268,7 +271,6 @@ fun EventList(
                         Text(text = "Status: ${event.status}")
                         if (!event.description.isNullOrEmpty()) {
                             Spacer(modifier = Modifier.height(4.dp))
-                            // pakai orEmpty() biar tanpa "!!"
                             Text(text = event.description.orEmpty())
                         }
 
@@ -296,13 +298,47 @@ fun AddEventDialog(
     onDismiss: () -> Unit,
     onSave: (EventRequest) -> Unit
 ) {
+    val context = LocalContext.current
+    val calendar = remember { Calendar.getInstance() }
+
     var title by remember { mutableStateOf("") }
-    var date by remember { mutableStateOf("") }      // YYYY-MM-DD
-    var time by remember { mutableStateOf("") }      // HH:MM
+    var date by remember { mutableStateOf("") }      // YYYY-MM-DD (di-set dari DatePicker)
+    var time by remember { mutableStateOf("") }      // HH:MM (di-set dari TimePicker)
     var location by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var capacityText by remember { mutableStateOf("") }
     var status by remember { mutableStateOf("upcoming") }
+
+    fun openDatePicker() {
+        val year = calendar.get(Calendar.YEAR)
+        val month = calendar.get(Calendar.MONTH)
+        val day = calendar.get(Calendar.DAY_OF_MONTH)
+
+        DatePickerDialog(
+            context,
+            { _, y, m, d ->
+                val mm = (m + 1).toString().padStart(2, '0')
+                val dd = d.toString().padStart(2, '0')
+                date = "$y-$mm-$dd"   // format sesuai validasi PHP
+            },
+            year, month, day
+        ).show()
+    }
+
+    fun openTimePicker() {
+        val hour = calendar.get(Calendar.HOUR_OF_DAY)
+        val minute = calendar.get(Calendar.MINUTE)
+
+        TimePickerDialog(
+            context,
+            { _, h, m ->
+                val hh = h.toString().padStart(2, '0')
+                val mm = m.toString().padStart(2, '0')
+                time = "$hh:$mm"      // format HH:MM
+            },
+            hour, minute, true
+        ).show()
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -312,42 +348,70 @@ fun AddEventDialog(
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
-                    label = { Text("Judul") }
+                    label = { Text("Judul") },
+                    modifier = Modifier.fillMaxWidth()
                 )
+                Spacer(Modifier.height(8.dp))
+
+                // Tanggal: klik untuk buka kalender
                 OutlinedTextField(
                     value = date,
-                    onValueChange = { date = it },
-                    label = { Text("Tanggal (YYYY-MM-DD)") }
+                    onValueChange = { },
+                    label = { Text("Tanggal (YYYY-MM-DD)") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { openDatePicker() },
+                    readOnly = true
                 )
+                Spacer(Modifier.height(8.dp))
+
+                // Jam: klik untuk buka time picker
                 OutlinedTextField(
                     value = time,
-                    onValueChange = { time = it },
-                    label = { Text("Jam (HH:MM)") }
+                    onValueChange = { },
+                    label = { Text("Jam (HH:MM)") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { openTimePicker() },
+                    readOnly = true
                 )
+                Spacer(Modifier.height(8.dp))
+
                 OutlinedTextField(
                     value = location,
                     onValueChange = { location = it },
-                    label = { Text("Lokasi") }
+                    label = { Text("Lokasi") },
+                    modifier = Modifier.fillMaxWidth()
                 )
+                Spacer(Modifier.height(8.dp))
+
                 OutlinedTextField(
                     value = description,
                     onValueChange = { description = it },
-                    label = { Text("Deskripsi (opsional)") }
+                    label = { Text("Deskripsi (opsional)") },
+                    modifier = Modifier.fillMaxWidth()
                 )
+                Spacer(Modifier.height(8.dp))
+
                 OutlinedTextField(
                     value = capacityText,
                     onValueChange = { capacityText = it },
-                    label = { Text("Kapasitas (opsional)") }
+                    label = { Text("Kapasitas (opsional)") },
+                    modifier = Modifier.fillMaxWidth()
                 )
+                Spacer(Modifier.height(8.dp))
+
                 OutlinedTextField(
                     value = status,
                     onValueChange = { status = it },
-                    label = { Text("Status (upcoming/ongoing/completed/cancelled)") }
+                    label = { Text("Status (upcoming/ongoing/completed/cancelled)") },
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
         },
         confirmButton = {
             TextButton(onClick = {
+                // cek field wajib terisi
                 if (title.isNotBlank() && date.isNotBlank() && time.isNotBlank()
                     && location.isNotBlank() && status.isNotBlank()
                 ) {
