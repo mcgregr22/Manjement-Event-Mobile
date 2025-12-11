@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -15,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import com.example.eventapp.Network.ApiClient
 import com.example.eventapp.Model.ApiResponse
 import com.example.eventapp.Model.Event
+import com.example.eventapp.Model.EventRequest
 import com.example.eventapp.ui.theme.EventappTheme
 import retrofit2.Call
 import retrofit2.Callback
@@ -29,7 +31,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        loadEvents()   // panggil API
+        // ambil data dari API saat app dibuka
+        loadEvents()
 
         setContent {
             EventappTheme {
@@ -37,10 +40,15 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    EventScreen(
+                    MainScreen(
                         events = eventsState.value,
                         loading = loadingState.value,
-                        error = errorState.value
+                        error = errorState.value,
+                        onRefresh = { loadEvents() },
+                        onCreateEvent = { request -> createEvent(request) },
+                        onDeleteEvent = { event ->
+                            event.id?.let { deleteEvent(it) }
+                        }
                     )
                 }
             }
@@ -82,64 +90,198 @@ class MainActivity : ComponentActivity() {
                 }
             })
     }
+
+    private fun createEvent(request: EventRequest) {
+        loadingState.value = true
+        errorState.value = null
+
+        ApiClient.apiService.createEvent(request)
+            .enqueue(object : Callback<ApiResponse<Event>> {
+                override fun onResponse(
+                    call: Call<ApiResponse<Event>>,
+                    response: Response<ApiResponse<Event>>
+                ) {
+                    loadingState.value = false
+                    if (response.isSuccessful) {
+                        val body = response.body()
+                        Log.d("API", "Create OK: ${body?.message}")
+                        // refresh list setelah tambah
+                        loadEvents()
+                    } else {
+                        val msg = "Gagal create: ${response.code()}"
+                        errorState.value = msg
+                        Log.e("API", msg)
+                    }
+                }
+
+                override fun onFailure(
+                    call: Call<ApiResponse<Event>>,
+                    t: Throwable
+                ) {
+                    loadingState.value = false
+                    errorState.value = t.message ?: "Gagal create"
+                    Log.e("API", "Create failure: ${t.message}")
+                }
+            })
+    }
+
+    private fun deleteEvent(id: Int) {
+        loadingState.value = true
+        errorState.value = null
+
+        ApiClient.apiService.deleteEvent(id)
+            .enqueue(object : Callback<ApiResponse<Any>> {
+                override fun onResponse(
+                    call: Call<ApiResponse<Any>>,
+                    response: Response<ApiResponse<Any>>
+                ) {
+                    loadingState.value = false
+                    if (response.isSuccessful) {
+                        val body = response.body()
+                        Log.d("API", "Delete OK: ${body?.message}")
+                        // refresh list setelah hapus
+                        loadEvents()
+                    } else {
+                        val msg = "Gagal delete: ${response.code()}"
+                        errorState.value = msg
+                        Log.e("API", msg)
+                    }
+                }
+
+                override fun onFailure(
+                    call: Call<ApiResponse<Any>>,
+                    t: Throwable
+                ) {
+                    loadingState.value = false
+                    errorState.value = t.message ?: "Gagal delete"
+                    Log.e("API", "Delete failure: ${t.message}")
+                }
+            })
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MainScreen(
+    events: List<Event>,
+    loading: Boolean,
+    error: String?,
+    onRefresh: () -> Unit,
+    onCreateEvent: (EventRequest) -> Unit,
+    onDeleteEvent: (Event) -> Unit
+) {
+    var showAddDialog by remember { mutableStateOf(false) }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+
+        Column(modifier = Modifier.fillMaxSize()) {
+            TopAppBar(
+                title = { Text("Event Management") },
+                actions = {
+                    TextButton(onClick = onRefresh) {
+                        Text("Refresh")
+                    }
+                }
+            )
+
+            if (loading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .weight(1f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            } else if (error != null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .weight(1f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(text = "Error: $error")
+                }
+            } else {
+                EventList(
+                    events = events,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .weight(1f),
+                    onDeleteEvent = onDeleteEvent
+                )
+            }
+        }
+
+        // Tombol + di pojok kanan bawah
+        FloatingActionButton(
+            onClick = { showAddDialog = true },
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(16.dp)
+        ) {
+            Text("+")
+        }
+
+        if (showAddDialog) {
+            AddEventDialog(
+                onDismiss = { showAddDialog = false },
+                onSave = { request ->
+                    onCreateEvent(request)
+                    showAddDialog = false
+                }
+            )
+        }
+    }
 }
 
 @Composable
-fun EventScreen(
+fun EventList(
     events: List<Event>,
-    loading: Boolean,
-    error: String?
+    modifier: Modifier = Modifier,
+    onDeleteEvent: (Event) -> Unit
 ) {
-    when {
-        loading -> {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
-            }
+    if (events.isEmpty()) {
+        Box(
+            modifier = modifier,
+            contentAlignment = Alignment.Center
+        ) {
+            Text(text = "Belum ada event")
         }
+    } else {
+        LazyColumn(
+            modifier = modifier.padding(16.dp)
+        ) {
+            items(events) { event ->
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = event.title,
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Text(text = "${event.date} ${event.time}")
+                        Text(text = event.location)
+                        Text(text = "Status: ${event.status}")
+                        if (!event.description.isNullOrEmpty()) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            // pakai orEmpty() biar tanpa "!!"
+                            Text(text = event.description.orEmpty())
+                        }
 
-        error != null -> {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(text = "Error: $error")
-            }
-        }
+                        Spacer(modifier = Modifier.height(8.dp))
 
-        events.isEmpty() -> {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(text = "Belum ada event")
-            }
-        }
-
-        else -> {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp)
-            ) {
-                items(events) { event ->
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 8.dp)
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text(
-                                text = event.title,
-                                style = MaterialTheme.typography.titleMedium
-                            )
-                            Text(text = "${event.date} ${event.time}")
-                            Text(text = event.location)
-                            if (!event.description.isNullOrEmpty()) {
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(text = event.description!!)
+                        Row(
+                            horizontalArrangement = Arrangement.End,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            if (event.id != null) {
+                                TextButton(onClick = { onDeleteEvent(event) }) {
+                                    Text("Hapus")
+                                }
                             }
                         }
                     }
@@ -147,4 +289,89 @@ fun EventScreen(
             }
         }
     }
+}
+
+@Composable
+fun AddEventDialog(
+    onDismiss: () -> Unit,
+    onSave: (EventRequest) -> Unit
+) {
+    var title by remember { mutableStateOf("") }
+    var date by remember { mutableStateOf("") }      // YYYY-MM-DD
+    var time by remember { mutableStateOf("") }      // HH:MM
+    var location by remember { mutableStateOf("") }
+    var description by remember { mutableStateOf("") }
+    var capacityText by remember { mutableStateOf("") }
+    var status by remember { mutableStateOf("upcoming") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Tambah Event") },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = { title = it },
+                    label = { Text("Judul") }
+                )
+                OutlinedTextField(
+                    value = date,
+                    onValueChange = { date = it },
+                    label = { Text("Tanggal (YYYY-MM-DD)") }
+                )
+                OutlinedTextField(
+                    value = time,
+                    onValueChange = { time = it },
+                    label = { Text("Jam (HH:MM)") }
+                )
+                OutlinedTextField(
+                    value = location,
+                    onValueChange = { location = it },
+                    label = { Text("Lokasi") }
+                )
+                OutlinedTextField(
+                    value = description,
+                    onValueChange = { description = it },
+                    label = { Text("Deskripsi (opsional)") }
+                )
+                OutlinedTextField(
+                    value = capacityText,
+                    onValueChange = { capacityText = it },
+                    label = { Text("Kapasitas (opsional)") }
+                )
+                OutlinedTextField(
+                    value = status,
+                    onValueChange = { status = it },
+                    label = { Text("Status (upcoming/ongoing/completed/cancelled)") }
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                if (title.isNotBlank() && date.isNotBlank() && time.isNotBlank()
+                    && location.isNotBlank() && status.isNotBlank()
+                ) {
+                    val capacity = capacityText.toIntOrNull()
+
+                    val request = EventRequest(
+                        title = title,
+                        date = date,
+                        time = time,
+                        location = location,
+                        description = if (description.isBlank()) null else description,
+                        capacity = capacity,
+                        status = status
+                    )
+                    onSave(request)
+                }
+            }) {
+                Text("Simpan")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Batal")
+            }
+        }
+    )
 }
