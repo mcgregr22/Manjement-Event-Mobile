@@ -51,6 +51,7 @@ class MainActivity : ComponentActivity() {
                         error = errorState.value,
                         onRefresh = { loadEvents() },
                         onCreateEvent = { request -> createEvent(request) },
+                        onUpdateEvent = { id, request -> updateEvent(id, request) }, // ⬅️ baru
                         onDeleteEvent = { event ->
                             event.id?.let { deleteEvent(it) }
                         }
@@ -161,6 +162,40 @@ class MainActivity : ComponentActivity() {
                 }
             })
     }
+
+    // ⬇️ fungsi BARU untuk UPDATE event
+    private fun updateEvent(id: Int, request: EventRequest) {
+        loadingState.value = true
+        errorState.value = null
+
+        ApiClient.apiService.updateEvent(id, request)
+            .enqueue(object : Callback<ApiResponse<Event>> {
+                override fun onResponse(
+                    call: Call<ApiResponse<Event>>,
+                    response: Response<ApiResponse<Event>>
+                ) {
+                    loadingState.value = false
+                    if (response.isSuccessful) {
+                        val body = response.body()
+                        Log.d("API", "Update OK: ${body?.message}")
+                        loadEvents()   // refresh list setelah update
+                    } else {
+                        val msg = "Gagal update: ${response.code()}"
+                        errorState.value = msg
+                        Log.e("API", msg)
+                    }
+                }
+
+                override fun onFailure(
+                    call: Call<ApiResponse<Event>>,
+                    t: Throwable
+                ) {
+                    loadingState.value = false
+                    errorState.value = t.message ?: "Gagal update"
+                    Log.e("API", "Update failure: ${t.message}")
+                }
+            })
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -171,9 +206,11 @@ fun MainScreen(
     error: String?,
     onRefresh: () -> Unit,
     onCreateEvent: (EventRequest) -> Unit,
+    onUpdateEvent: (Int, EventRequest) -> Unit, // ⬅️ baru
     onDeleteEvent: (Event) -> Unit
 ) {
     var showAddDialog by remember { mutableStateOf(false) }
+    var editingEvent by remember { mutableStateOf<Event?>(null) } // ⬅️ event yg sedang di-edit
 
     Box(modifier = Modifier.fillMaxSize()) {
 
@@ -211,6 +248,7 @@ fun MainScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .weight(1f),
+                    onEditEvent = { event -> editingEvent = event }, // ⬅️ baru
                     onDeleteEvent = onDeleteEvent
                 )
             }
@@ -235,6 +273,20 @@ fun MainScreen(
                 }
             )
         }
+
+        // Dialog edit event
+        editingEvent?.let { event ->
+            EditEventDialog(
+                event = event,
+                onDismiss = { editingEvent = null },
+                onSave = { request ->
+                    event.id?.let { id ->
+                        onUpdateEvent(id, request)
+                    }
+                    editingEvent = null
+                }
+            )
+        }
     }
 }
 
@@ -242,6 +294,7 @@ fun MainScreen(
 fun EventList(
     events: List<Event>,
     modifier: Modifier = Modifier,
+    onEditEvent: (Event) -> Unit,     // ⬅️ baru
     onDeleteEvent: (Event) -> Unit
 ) {
     if (events.isEmpty()) {
@@ -281,6 +334,9 @@ fun EventList(
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             if (event.id != null) {
+                                TextButton(onClick = { onEditEvent(event) }) {
+                                    Text("Edit")
+                                }
                                 TextButton(onClick = { onDeleteEvent(event) }) {
                                     Text("Hapus")
                                 }
@@ -412,6 +468,152 @@ fun AddEventDialog(
         confirmButton = {
             TextButton(onClick = {
                 // cek field wajib terisi
+                if (title.isNotBlank() && date.isNotBlank() && time.isNotBlank()
+                    && location.isNotBlank() && status.isNotBlank()
+                ) {
+                    val capacity = capacityText.toIntOrNull()
+
+                    val request = EventRequest(
+                        title = title,
+                        date = date,
+                        time = time,
+                        location = location,
+                        description = if (description.isBlank()) null else description,
+                        capacity = capacity,
+                        status = status
+                    )
+                    onSave(request)
+                }
+            }) {
+                Text("Simpan")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Batal")
+            }
+        }
+    )
+}
+
+// ⬇️ Dialog BARU untuk EDIT event
+@Composable
+fun EditEventDialog(
+    event: Event,
+    onDismiss: () -> Unit,
+    onSave: (EventRequest) -> Unit
+) {
+    val context = LocalContext.current
+    val calendar = remember { Calendar.getInstance() }
+
+    var title by remember { mutableStateOf(event.title) }
+    var date by remember { mutableStateOf(event.date) }
+    var time by remember { mutableStateOf(event.time) }
+    var location by remember { mutableStateOf(event.location) }
+    var description by remember { mutableStateOf(event.description ?: "") }
+    var capacityText by remember { mutableStateOf(event.capacity?.toString() ?: "") }
+    var status by remember { mutableStateOf(event.status) }
+
+    fun openDatePicker() {
+        val year = calendar.get(Calendar.YEAR)
+        val month = calendar.get(Calendar.MONTH)
+        val day = calendar.get(Calendar.DAY_OF_MONTH)
+
+        DatePickerDialog(
+            context,
+            { _, y, m, d ->
+                val mm = (m + 1).toString().padStart(2, '0')
+                val dd = d.toString().padStart(2, '0')
+                date = "$y-$mm-$dd"
+            },
+            year, month, day
+        ).show()
+    }
+
+    fun openTimePicker() {
+        val hour = calendar.get(Calendar.HOUR_OF_DAY)
+        val minute = calendar.get(Calendar.MINUTE)
+
+        TimePickerDialog(
+            context,
+            { _, h, m ->
+                val hh = h.toString().padStart(2, '0')
+                val mm = m.toString().padStart(2, '0')
+                time = "$hh:$mm"
+            },
+            hour, minute, true
+        ).show()
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Edit Event") },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = { title = it },
+                    label = { Text("Judul") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(8.dp))
+
+                OutlinedTextField(
+                    value = date,
+                    onValueChange = { },
+                    label = { Text("Tanggal (YYYY-MM-DD)") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { openDatePicker() },
+                    readOnly = true
+                )
+                Spacer(Modifier.height(8.dp))
+
+                OutlinedTextField(
+                    value = time,
+                    onValueChange = { },
+                    label = { Text("Jam (HH:MM)") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { openTimePicker() },
+                    readOnly = true
+                )
+                Spacer(Modifier.height(8.dp))
+
+                OutlinedTextField(
+                    value = location,
+                    onValueChange = { location = it },
+                    label = { Text("Lokasi") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(8.dp))
+
+                OutlinedTextField(
+                    value = description,
+                    onValueChange = { description = it },
+                    label = { Text("Deskripsi (opsional)") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(8.dp))
+
+                OutlinedTextField(
+                    value = capacityText,
+                    onValueChange = { capacityText = it },
+                    label = { Text("Kapasitas (opsional)") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(8.dp))
+
+                OutlinedTextField(
+                    value = status,
+                    onValueChange = { status = it },
+                    label = { Text("Status (upcoming/ongoing/completed/cancelled)") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
                 if (title.isNotBlank() && date.isNotBlank() && time.isNotBlank()
                     && location.isNotBlank() && status.isNotBlank()
                 ) {
