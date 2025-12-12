@@ -179,19 +179,33 @@ private fun StatusFilterRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         statusOptions.forEach { status ->
+            val label = if (status == "Semua") {
+                "Semua"
+            } else {
+                status.replaceFirstChar { it.uppercase() }   // Upcoming / Ongoing / Completed / Cancelled
+            }
+
             FilterChip(
                 selected = selectedStatus == status,
                 onClick = { onStatusSelected(status) },
+                modifier = Modifier
+                    .weight(1f)          // ➜ semua chip dibagi rata lebarnya
+                    .height(34.dp),
                 label = {
                     Text(
-                        text = status.replaceFirstChar { it.uppercase() },
-                        fontSize = 12.sp
+                        text = label,
+                        fontSize = 12.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
                     )
                 }
             )
         }
     }
 }
+
 
 @Composable
 fun EventListModern(

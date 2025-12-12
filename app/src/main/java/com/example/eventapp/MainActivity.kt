@@ -607,9 +607,12 @@ fun EditEventDialog(
                 OutlinedTextField(
                     value = status,
                     onValueChange = { status = it },
-                    label = { Text("Status (upcoming/ongoing/completed/cancelled)") },
+                    label = { Text("Status") }, // ⬅️ nggak panjang lagi
+                    placeholder = { Text("upcoming / ongoing / completed / cancelled") },
                     modifier = Modifier.fillMaxWidth()
                 )
+
+
             }
         },
         confirmButton = {
