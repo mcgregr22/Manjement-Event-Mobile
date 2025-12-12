@@ -11,6 +11,7 @@ object ApiClient {
     // http://localhost/proyek%20akhir/event-api-php.php
     // maka:
     private const val BASE_URL = "http://10.0.2.2/proyek%20akhir/"
+//    private const val BASE_URL = "http://10.30.208.26/proyek%20akhir/"
 
     // (Kalau nanti kamu rename folder jadi "proyek-akhir" tanpa spasi,
     // tinggal ganti baris di atas jadi:
