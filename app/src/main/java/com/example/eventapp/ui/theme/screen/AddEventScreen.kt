@@ -27,6 +27,11 @@ import com.example.eventapp.ui.theme.viewmodel.EventViewModel
 import java.util.Calendar
 import java.util.Locale
 
+private val XmasRed = Color(0xFFB91C1C)
+private val XmasGreen = Color(0xFF15803D)
+private val XmasGold = Color(0xFFF59E0B)
+private val Snow = Color(0xFFF8FAFC)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddEventScreen(
@@ -54,7 +59,6 @@ fun AddEventScreen(
 
     val calendar = remember { Calendar.getInstance() }
 
-    // Dialogs (dibuat di dalam composable -> aman)
     val datePickerDialog = remember {
         DatePickerDialog(
             context,
@@ -83,8 +87,8 @@ fun AddEventScreen(
 
     val bgBrush = Brush.verticalGradient(
         listOf(
-            MaterialTheme.colorScheme.primary.copy(alpha = 0.18f),
-            MaterialTheme.colorScheme.tertiary.copy(alpha = 0.10f),
+            XmasGreen.copy(alpha = 0.18f),
+            XmasRed.copy(alpha = 0.10f),
             MaterialTheme.colorScheme.background
         )
     )
@@ -96,12 +100,23 @@ fun AddEventScreen(
                     .fillMaxWidth()
                     .background(bgBrush)
             ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(120.dp)
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(Snow.copy(alpha = 0.75f), Color.Transparent)
+                            )
+                        )
+                )
+
                 TopAppBar(
                     title = {
                         Column {
-                            Text("Tambah Event Baru", fontWeight = FontWeight.ExtraBold)
+                            Text("🎁 Tambah Event Baru", fontWeight = FontWeight.ExtraBold)
                             Text(
-                                "Isi data event dengan lengkap",
+                                "Biar makin meriah di kalender ✨",
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -109,7 +124,7 @@ fun AddEventScreen(
                     },
                     navigationIcon = {
                         IconButton(onClick = { navController.popBackStack() }) {
-                            Icon(Icons.Default.ArrowBack, contentDescription = "Kembali")
+                            Icon(Icons.Default.ArrowBack, "Kembali")
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
@@ -126,22 +141,20 @@ fun AddEventScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
-
-            ElevatedCard(
+            // Banner natal
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.elevatedCardColors(
-                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f)
-                )
+                color = XmasGold.copy(alpha = 0.16f)
             ) {
                 Row(
-                    modifier = Modifier.padding(16.dp),
+                    modifier = Modifier.padding(14.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.Info, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                    Spacer(Modifier.width(12.dp))
+                    Icon(Icons.Default.Info, null, tint = XmasGold)
+                    Spacer(Modifier.width(10.dp))
                     Text(
-                        "Field bertanda * wajib diisi untuk menyimpan event.",
-                        style = MaterialTheme.typography.bodyMedium,
+                        "Field bertanda * wajib diisi ya 🎄",
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -160,7 +173,7 @@ fun AddEventScreen(
                         value = title,
                         onValueChange = { title = it; titleError = false },
                         label = { Text("Judul Event *") },
-                        leadingIcon = { Icon(Icons.Default.Event, null) },
+                        leadingIcon = { Icon(Icons.Default.Event, null, tint = XmasRed) },
                         isError = titleError,
                         supportingText = if (titleError) { { Text("Judul wajib diisi") } } else null,
                         singleLine = true,
@@ -174,17 +187,17 @@ fun AddEventScreen(
                         value = date,
                         onValueChange = {},
                         label = { Text("Tanggal *") },
-                        leadingIcon = { Icon(Icons.Default.CalendarToday, null) },
+                        leadingIcon = { Icon(Icons.Default.CalendarToday, null, tint = XmasGreen) },
                         trailingIcon = {
                             IconButton(onClick = { datePickerDialog.show() }) {
-                                Icon(Icons.Default.EditCalendar, contentDescription = "Pilih tanggal")
+                                Icon(Icons.Default.EditCalendar, contentDescription = "Pilih tanggal", tint = XmasGreen)
                             }
                         },
                         isError = dateError,
                         supportingText = if (dateError) {
                             { Text("Tanggal wajib diisi") }
                         } else if (date.isNotEmpty()) {
-                            { Text("Dipilih: ${add_formatDateDisplay(date)}", color = MaterialTheme.colorScheme.primary) }
+                            { Text("Dipilih: ${AddXmasFormatDateDisplay(date)}", color = XmasGreen) }
                         } else null,
                         readOnly = true,
                         singleLine = true,
@@ -198,17 +211,17 @@ fun AddEventScreen(
                         value = time,
                         onValueChange = {},
                         label = { Text("Waktu *") },
-                        leadingIcon = { Icon(Icons.Default.Schedule, null) },
+                        leadingIcon = { Icon(Icons.Default.Schedule, null, tint = XmasGold) },
                         trailingIcon = {
                             IconButton(onClick = { timePickerDialog.show() }) {
-                                Icon(Icons.Default.AccessTime, contentDescription = "Pilih waktu")
+                                Icon(Icons.Default.AccessTime, contentDescription = "Pilih waktu", tint = XmasGold)
                             }
                         },
                         isError = timeError,
                         supportingText = if (timeError) {
                             { Text("Waktu wajib diisi") }
                         } else if (time.isNotEmpty()) {
-                            { Text("Dipilih: ${add_formatTimeDisplay(time)}", color = MaterialTheme.colorScheme.primary) }
+                            { Text("Dipilih: ${AddXmasFormatTimeDisplay(time)}", color = XmasGold) }
                         } else null,
                         readOnly = true,
                         singleLine = true,
@@ -222,7 +235,7 @@ fun AddEventScreen(
                         value = location,
                         onValueChange = { location = it; locationError = false },
                         label = { Text("Lokasi *") },
-                        leadingIcon = { Icon(Icons.Default.LocationOn, null) },
+                        leadingIcon = { Icon(Icons.Default.LocationOn, null, tint = XmasRed) },
                         isError = locationError,
                         supportingText = if (locationError) { { Text("Lokasi wajib diisi") } } else null,
                         singleLine = true,
@@ -236,7 +249,7 @@ fun AddEventScreen(
                         value = description,
                         onValueChange = { if (it.length <= 500) description = it },
                         label = { Text("Deskripsi (opsional)") },
-                        leadingIcon = { Icon(Icons.Default.Description, null) },
+                        leadingIcon = { Icon(Icons.Default.Description, null, tint = XmasGreen) },
                         supportingText = { Text("${description.length}/500 karakter") },
                         minLines = 3,
                         maxLines = 5,
@@ -252,7 +265,7 @@ fun AddEventScreen(
                             if (it.isEmpty() || it.all { ch -> ch.isDigit() }) capacityText = it
                         },
                         label = { Text("Kapasitas Peserta (opsional)") },
-                        leadingIcon = { Icon(Icons.Default.People, null) },
+                        leadingIcon = { Icon(Icons.Default.People, null, tint = XmasGold) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
                         shape = RoundedCornerShape(16.dp),
@@ -266,24 +279,17 @@ fun AddEventScreen(
                         onExpandedChange = { expanded = !expanded }
                     ) {
                         OutlinedTextField(
-                            value = add_getStatusLabel(status),
+                            value = AddXmasStatusLabel(status),
                             onValueChange = {},
                             readOnly = true,
                             label = { Text("Status Event *") },
                             leadingIcon = {
-                                Icon(
-                                    when (status) {
-                                        "upcoming" -> Icons.Default.Schedule
-                                        "ongoing" -> Icons.Default.PlayArrow
-                                        "completed" -> Icons.Default.CheckCircle
-                                        "cancelled" -> Icons.Default.Cancel
-                                        else -> Icons.Default.Event
-                                    },
-                                    null
-                                )
+                                Icon(Icons.Default.Star, null, tint = AddXmasStatusColor(status))
                             },
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                            modifier = Modifier.fillMaxWidth().menuAnchor(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .menuAnchor(),
                             shape = RoundedCornerShape(16.dp)
                         )
 
@@ -293,10 +299,13 @@ fun AddEventScreen(
                         ) {
                             statusOptions.forEach { option ->
                                 DropdownMenuItem(
-                                    text = { Text(add_getStatusLabel(option)) },
+                                    text = { Text(AddXmasStatusLabel(option)) },
                                     onClick = {
                                         status = option
                                         expanded = false
+                                    },
+                                    leadingIcon = {
+                                        Icon(Icons.Default.Star, null, tint = AddXmasStatusColor(option))
                                     }
                                 )
                             }
@@ -343,8 +352,11 @@ fun AddEventScreen(
                     }
                 },
                 enabled = !isLoading,
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-                shape = RoundedCornerShape(18.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                shape = RoundedCornerShape(18.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = XmasRed)
             ) {
                 if (isLoading) {
                     CircularProgressIndicator(
@@ -363,7 +375,9 @@ fun AddEventScreen(
 
             OutlinedButton(
                 onClick = { navController.popBackStack() },
-                modifier = Modifier.fillMaxWidth().height(52.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
                 shape = RoundedCornerShape(18.dp)
             ) {
                 Icon(Icons.Default.Close, null)
@@ -376,16 +390,24 @@ fun AddEventScreen(
     }
 }
 
-/** Helper PRIVATE + nama unik supaya tidak tabrakan dengan file lain */
-private fun add_getStatusLabel(status: String): String = when (status) {
-    "upcoming" -> "Akan Datang"
-    "ongoing" -> "Berlangsung"
-    "completed" -> "Selesai"
-    "cancelled" -> "Dibatalkan"
+/** helpers PRIVATE + nama unik -> tidak bentrok file lain */
+private fun AddXmasStatusColor(status: String): Color = when (status) {
+    "upcoming" -> XmasGreen
+    "ongoing" -> XmasGold
+    "completed" -> Color(0xFF0EA5E9)
+    "cancelled" -> XmasRed
+    else -> Color(0xFF64748B)
+}
+
+private fun AddXmasStatusLabel(status: String): String = when (status) {
+    "upcoming" -> "🎄 Akan Datang"
+    "ongoing" -> "✨ Berlangsung"
+    "completed" -> "❄️ Selesai"
+    "cancelled" -> "🧨 Dibatalkan"
     else -> status
 }
 
-private fun add_formatDateDisplay(date: String): String {
+private fun AddXmasFormatDateDisplay(date: String): String {
     return try {
         val parts = date.split("-")
         if (parts.size == 3) {
@@ -395,16 +417,16 @@ private fun add_formatDateDisplay(date: String): String {
             )
             "${parts[2]} ${months[parts[1].toInt()]} ${parts[0]}"
         } else date
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         date
     }
 }
 
-private fun add_formatTimeDisplay(time: String): String {
+private fun AddXmasFormatTimeDisplay(time: String): String {
     return try {
         val parts = time.split(":")
         if (parts.size >= 2) "${parts[0]}:${parts[1]} WIB" else time
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         time
     }
 }

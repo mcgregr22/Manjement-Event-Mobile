@@ -1,7 +1,6 @@
 package com.example.eventapp.ui.theme.screen
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -25,6 +24,11 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.eventapp.Model.Event
 import com.example.eventapp.ui.theme.viewmodel.EventViewModel
+
+private val XmasRed = Color(0xFFB91C1C)
+private val XmasGreen = Color(0xFF15803D)
+private val XmasGold = Color(0xFFF59E0B)
+private val Snow = Color(0xFFF8FAFC)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -56,15 +60,12 @@ fun EventListScreen(
         }
     }
 
-    LaunchedEffect(Unit) {
-        viewModel.loadEvents()
-    }
+    LaunchedEffect(Unit) { viewModel.loadEvents() }
 
-    // Background gradient biar “berwarna”
     val bgBrush = Brush.verticalGradient(
         listOf(
-            MaterialTheme.colorScheme.primary.copy(alpha = 0.16f),
-            MaterialTheme.colorScheme.tertiary.copy(alpha = 0.10f),
+            XmasGreen.copy(alpha = 0.18f),
+            XmasRed.copy(alpha = 0.10f),
             MaterialTheme.colorScheme.background
         )
     )
@@ -76,13 +77,21 @@ fun EventListScreen(
                     .fillMaxWidth()
                     .background(bgBrush)
             ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(120.dp)
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(Snow.copy(alpha = 0.75f), Color.Transparent)
+                            )
+                        )
+                )
+
                 TopAppBar(
                     title = {
                         Column {
-                            Text(
-                                "Event Manager",
-                                fontWeight = FontWeight.ExtraBold
-                            )
+                            Text("🎄 Event Manager", fontWeight = FontWeight.ExtraBold)
                             Text(
                                 "${events.size} Event",
                                 style = MaterialTheme.typography.labelMedium,
@@ -100,36 +109,28 @@ fun EventListScreen(
                         IconButton(onClick = onCalendarClick) {
                             Icon(Icons.Default.CalendarMonth, contentDescription = "Kalender")
                         }
-
                         DropdownMenu(
                             expanded = showFilterMenu,
                             onDismissRequest = { showFilterMenu = false }
                         ) {
-                            FilterItem("Semua Event", "all", selectedFilter) {
-                                selectedFilter = it
-                                showFilterMenu = false
+                            XmasFilterItem("Semua", "all", selectedFilter) {
+                                selectedFilter = it; showFilterMenu = false
                             }
-                            FilterItem("Akan Datang", "upcoming", selectedFilter) {
-                                selectedFilter = it
-                                showFilterMenu = false
+                            XmasFilterItem("🎄 Akan Datang", "upcoming", selectedFilter) {
+                                selectedFilter = it; showFilterMenu = false
                             }
-                            FilterItem("Berlangsung", "ongoing", selectedFilter) {
-                                selectedFilter = it
-                                showFilterMenu = false
+                            XmasFilterItem("✨ Berlangsung", "ongoing", selectedFilter) {
+                                selectedFilter = it; showFilterMenu = false
                             }
-                            FilterItem("Selesai", "completed", selectedFilter) {
-                                selectedFilter = it
-                                showFilterMenu = false
+                            XmasFilterItem("❄️ Selesai", "completed", selectedFilter) {
+                                selectedFilter = it; showFilterMenu = false
                             }
-                            FilterItem("Dibatalkan", "cancelled", selectedFilter) {
-                                selectedFilter = it
-                                showFilterMenu = false
+                            XmasFilterItem("🧨 Dibatalkan", "cancelled", selectedFilter) {
+                                selectedFilter = it; showFilterMenu = false
                             }
                         }
                     },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = Color.Transparent
-                    )
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
                 )
             }
         },
@@ -137,7 +138,7 @@ fun EventListScreen(
             FloatingActionButton(
                 onClick = onAddClick,
                 shape = RoundedCornerShape(18.dp),
-                containerColor = MaterialTheme.colorScheme.primary
+                containerColor = XmasRed
             ) {
                 Row(
                     modifier = Modifier.padding(horizontal = 14.dp),
@@ -163,7 +164,6 @@ fun EventListScreen(
             ) {
                 Spacer(Modifier.height(10.dp))
 
-                // Search bar modern
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
@@ -180,33 +180,26 @@ fun EventListScreen(
                     singleLine = true,
                     shape = RoundedCornerShape(18.dp),
                     colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = XmasGreen,
+                        unfocusedBorderColor = XmasRed.copy(alpha = 0.35f),
+                        focusedLeadingIconColor = XmasGreen,
+                        unfocusedLeadingIconColor = XmasRed,
                         focusedContainerColor = MaterialTheme.colorScheme.surface,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.75f)
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f)
                     )
                 )
 
                 Spacer(Modifier.height(10.dp))
 
-                // Chip filter aktif
                 AnimatedVisibility(visible = selectedFilter != "all") {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Start
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         FilterChip(
                             selected = true,
                             onClick = { selectedFilter = "all" },
-                            label = {
-                                Text(
-                                    when (selectedFilter) {
-                                        "upcoming" -> "Akan Datang"
-                                        "ongoing" -> "Berlangsung"
-                                        "completed" -> "Selesai"
-                                        "cancelled" -> "Dibatalkan"
-                                        else -> selectedFilter
-                                    }
-                                )
-                            },
+                            label = { Text(XmasStatusLabel(selectedFilter)) },
                             leadingIcon = { Icon(Icons.Default.FilterAlt, null, Modifier.size(18.dp)) },
                             trailingIcon = { Icon(Icons.Default.Close, null, Modifier.size(18.dp)) }
                         )
@@ -216,20 +209,15 @@ fun EventListScreen(
                 Spacer(Modifier.height(10.dp))
 
                 when {
-                    isLoading -> ModernLoadingState()
-
-                    filteredEvents.isEmpty() -> ModernEmptyState(searchQuery)
-
+                    isLoading -> XmasLoading()
+                    filteredEvents.isEmpty() -> XmasEmpty(searchQuery)
                     else -> LazyColumn(
                         contentPadding = PaddingValues(bottom = 100.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                         modifier = Modifier.fillMaxSize()
                     ) {
                         items(filteredEvents, key = { it.id }) { ev ->
-                            ModernEventCard(
-                                event = ev,
-                                onClick = { onEventClick(ev.id) }
-                            )
+                            XmasEventCard(ev) { onEventClick(ev.id) }
                         }
                     }
                 }
@@ -239,7 +227,7 @@ fun EventListScreen(
 }
 
 @Composable
-fun FilterItem(name: String, key: String, selected: String, onClick: (String) -> Unit) {
+private fun XmasFilterItem(name: String, key: String, selected: String, onClick: (String) -> Unit) {
     DropdownMenuItem(
         text = { Text(name) },
         onClick = { onClick(key) },
@@ -248,37 +236,31 @@ fun FilterItem(name: String, key: String, selected: String, onClick: (String) ->
 }
 
 @Composable
-private fun ModernLoadingState() {
+private fun XmasLoading() {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(top = 60.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        CircularProgressIndicator()
+        CircularProgressIndicator(color = XmasGreen)
         Spacer(Modifier.height(12.dp))
         Text("Memuat event…", color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
 @Composable
-private fun ModernEmptyState(search: String) {
+private fun XmasEmpty(search: String) {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(top = 60.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Icon(
-            Icons.Default.EventBusy,
-            contentDescription = null,
-            modifier = Modifier.size(72.dp),
-            tint = MaterialTheme.colorScheme.primary
-        )
+        Icon(Icons.Default.EventBusy, null, Modifier.size(72.dp), tint = XmasRed)
         Spacer(Modifier.height(12.dp))
         Text(
-            if (search.isEmpty()) "Belum ada event"
-            else "Event tidak ditemukan",
+            if (search.isEmpty()) "Belum ada event 🎁" else "Event tidak ditemukan",
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold
         )
@@ -291,13 +273,8 @@ private fun ModernEmptyState(search: String) {
 }
 
 @Composable
-private fun ModernEventCard(
-    event: Event,
-    onClick: () -> Unit
-) {
-    val (accent, label, icon) = statusStyle(event.status)
-
-    val pressedScale by animateFloatAsState(targetValue = 1f, label = "scale")
+private fun XmasEventCard(event: Event, onClick: () -> Unit) {
+    val accent = XmasStatusColor(event.status)
 
     ElevatedCard(
         modifier = Modifier
@@ -305,21 +282,15 @@ private fun ModernEventCard(
             .clickable { onClick() },
         shape = RoundedCornerShape(20.dp),
         elevation = CardDefaults.elevatedCardElevation(defaultElevation = 3.dp),
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        )
+        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            // Accent strip berwarna di kiri
+        Row(Modifier.fillMaxWidth()) {
             Box(
                 modifier = Modifier
                     .width(7.dp)
                     .fillMaxHeight()
                     .background(accent)
             )
-
             Column(
                 modifier = Modifier
                     .padding(16.dp)
@@ -332,7 +303,7 @@ private fun ModernEventCard(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = event.title,
+                            event.title,
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.ExtraBold,
                             maxLines = 1,
@@ -340,7 +311,7 @@ private fun ModernEventCard(
                         )
                         Spacer(Modifier.height(2.dp))
                         Text(
-                            text = event.location,
+                            event.location,
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,
@@ -348,28 +319,35 @@ private fun ModernEventCard(
                         )
                     }
 
-                    StatusPill(
-                        text = label,
-                        color = accent,
-                        icon = icon
-                    )
+                    Surface(
+                        color = accent.copy(alpha = 0.16f),
+                        contentColor = accent,
+                        shape = RoundedCornerShape(999.dp)
+                    ) {
+                        Text(
+                            text = XmasStatusLabel(event.status),
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
                 }
 
                 Spacer(Modifier.height(12.dp))
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(14.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    InfoMini(Icons.Default.CalendarToday, formatDate(event.date))
-                    InfoMini(Icons.Default.Schedule, formatTime(event.time))
+                Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                    XmasInfoMini(Icons.Default.CalendarToday, XmasFormatDate(event.date))
+                    XmasInfoMini(Icons.Default.Schedule, XmasFormatTime(event.time))
                 }
 
                 Spacer(Modifier.height(10.dp))
 
-                if (event.capacity != null) {
-                    InfoRowLine(Icons.Default.People, "${event.capacity} orang")
+                event.capacity?.let {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.People, null, Modifier.size(18.dp), tint = XmasGold)
+                        Spacer(Modifier.width(6.dp))
+                        Text("$it orang", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 }
             }
         }
@@ -377,77 +355,50 @@ private fun ModernEventCard(
 }
 
 @Composable
-private fun StatusPill(
-    text: String,
-    color: Color,
-    icon: ImageVector
-) {
-    Surface(
-        color = color.copy(alpha = 0.16f),
-        contentColor = color,
-        shape = RoundedCornerShape(999.dp)
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(18.dp)
-                    .clip(CircleShape)
-                    .background(color.copy(alpha = 0.22f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(icon, contentDescription = null, modifier = Modifier.size(14.dp))
-            }
-            Spacer(Modifier.width(6.dp))
-            Text(text, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
-        }
-    }
-}
-
-@Composable
-private fun InfoMini(icon: ImageVector, text: String) {
+private fun XmasInfoMini(icon: ImageVector, text: String) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
-        Spacer(Modifier.width(6.dp))
+        Box(
+            modifier = Modifier
+                .size(28.dp)
+                .clip(CircleShape)
+                .background(XmasGreen.copy(alpha = 0.12f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(icon, null, Modifier.size(16.dp), tint = XmasGreen)
+        }
+        Spacer(Modifier.width(8.dp))
         Text(text, style = MaterialTheme.typography.bodyMedium)
     }
 }
 
-@Composable
-private fun InfoRowLine(icon: ImageVector, text: String) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.tertiary)
-        Spacer(Modifier.width(6.dp))
-        Text(text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
+// helper PRIVATE + nama unik biar tidak bentrok dengan file lain
+private fun XmasStatusColor(status: String): Color = when (status) {
+    "upcoming" -> XmasGreen
+    "ongoing" -> XmasGold
+    "completed" -> Color(0xFF0EA5E9)
+    "cancelled" -> XmasRed
+    else -> Color(0xFF64748B)
 }
 
-private fun statusStyle(status: String): Triple<Color, String, ImageVector> {
-    return when (status) {
-        "upcoming" -> Triple(Color(0xFF3B82F6), "Akan Datang", Icons.Default.Schedule)
-        "ongoing" -> Triple(Color(0xFF8B5CF6), "Berlangsung", Icons.Default.PlayArrow)
-        "completed" -> Triple(Color(0xFF22C55E), "Selesai", Icons.Default.CheckCircle)
-        "cancelled" -> Triple(Color(0xFFEF4444), "Dibatalkan", Icons.Default.Cancel)
-        else -> Triple(Color(0xFF64748B), status, Icons.Default.Event)
-    }
+private fun XmasStatusLabel(status: String): String = when (status) {
+    "upcoming" -> "🎄 Akan Datang"
+    "ongoing" -> "✨ Berlangsung"
+    "completed" -> "❄️ Selesai"
+    "cancelled" -> "🧨 Dibatalkan"
+    else -> status
 }
 
-fun formatDate(date: String): String {
+private fun XmasFormatDate(date: String): String {
     return try {
         val (y, m, d) = date.split("-")
-        val bulan = listOf(
-            "", "Jan", "Feb", "Mar", "Apr", "Mei", "Jun",
-            "Jul", "Agu", "Sep", "Okt", "Nov", "Des"
-        )
+        val bulan = listOf("", "Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des")
         "$d ${bulan[m.toInt()]} $y"
     } catch (_: Exception) {
         date
     }
 }
 
-fun formatTime(time: String): String {
+private fun XmasFormatTime(time: String): String {
     return try {
         val parts = time.split(":")
         val h = parts.getOrNull(0) ?: return time
