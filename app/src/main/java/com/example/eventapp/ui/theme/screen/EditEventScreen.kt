@@ -20,6 +20,7 @@ import androidx.navigation.NavController
 import com.example.eventapp.Model.Event
 import com.example.eventapp.ui.theme.viewmodel.EventViewModel
 import java.util.Calendar
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -49,69 +50,84 @@ fun EditEventScreen(
     val statusOptions = listOf("upcoming", "ongoing", "completed", "cancelled")
     var expanded by remember { mutableStateOf(false) }
 
-    val calendar = Calendar.getInstance()
+    val calendar = remember { Calendar.getInstance() }
 
-    val datePickerDialog = DatePickerDialog(
-        context,
-        { _, year, month, dayOfMonth ->
-            date = String.format("%04d-%02d-%02d", year, month + 1, dayOfMonth)
-            dateError = false
-        },
-        calendar.get(Calendar.YEAR),
-        calendar.get(Calendar.MONTH),
-        calendar.get(Calendar.DAY_OF_MONTH)
-    )
+    val datePickerDialog = remember {
+        DatePickerDialog(
+            context,
+            { _, year, month, dayOfMonth ->
+                date = String.format(
+                    Locale.getDefault(),
+                    "%04d-%02d-%02d",
+                    year,
+                    month + 1,
+                    dayOfMonth
+                )
+                dateError = false
+            },
+            calendar.get(Calendar.YEAR),
+            calendar.get(Calendar.MONTH),
+            calendar.get(Calendar.DAY_OF_MONTH)
+        )
+    }
 
-    val timePickerDialog = TimePickerDialog(
-        context,
-        { _, hourOfDay, minute ->
-            time = String.format("%02d:%02d:00", hourOfDay, minute)
-            timeError = false
-        },
-        calendar.get(Calendar.HOUR_OF_DAY),
-        calendar.get(Calendar.MINUTE),
-        true
-    )
+    val timePickerDialog = remember {
+        TimePickerDialog(
+            context,
+            { _, hourOfDay, minute ->
+                time = String.format(
+                    Locale.getDefault(),
+                    "%02d:%02d:00",
+                    hourOfDay,
+                    minute
+                )
+                timeError = false
+            },
+            calendar.get(Calendar.HOUR_OF_DAY),
+            calendar.get(Calendar.MINUTE),
+            true
+        )
+    }
 
-        LaunchedEffect(eventId) {
-            if (!loaded) {
-                viewModel.getEventById(eventId) { event: Event? ->
-                    event?.let {
-                        title = it.title
-                        date = it.date
-                        time = it.time
-                        location = it.location
-                        description = it.description ?: ""
-                        capacityText = it.capacity?.toString() ?: ""
-                        status = it.status
-                    }
-                    loaded = true
+    LaunchedEffect(eventId) {
+        if (!loaded) {
+            viewModel.getEventById(eventId) { event ->
+                event?.let {
+                    title = it.title
+                    date = it.date
+                    time = it.time
+                    location = it.location
+                    description = it.description ?: ""
+                    capacityText = it.capacity?.toString() ?: ""
+                    status = it.status
                 }
+                loaded = true
             }
         }
+    }
 
-
-        Scaffold(
+    Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Edit Event", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, "Kembali")
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Kembali")
                     }
                 },
                 actions = {
                     IconButton(onClick = { showDeleteDialog = true }) {
-                        Icon(Icons.Default.Delete, "Hapus", tint = MaterialTheme.colorScheme.error)
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = "Hapus",
+                            tint = MaterialTheme.colorScheme.error
+                        )
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
+                }
             )
         }
     ) { paddingValues ->
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -119,102 +135,76 @@ fun EditEventScreen(
                 .padding(16.dp)
                 .verticalScroll(rememberScrollState())
         ) {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)
-                )
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Icon(Icons.Default.Edit, null, tint = MaterialTheme.colorScheme.secondary)
-                    Text(
-                        text = "Ubah informasi event sesuai kebutuhan",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
 
             OutlinedTextField(
                 value = title,
-                onValueChange = {
-                    title = it
-                    titleError = false
-                },
+                onValueChange = { title = it; titleError = false },
                 label = { Text("Judul Event *") },
                 leadingIcon = { Icon(Icons.Default.Event, null) },
                 isError = titleError,
-                supportingText = if (titleError) { { Text("Judul wajib diisi") } } else null,
+                supportingText = if (titleError) ({ Text("Judul wajib diisi") }) else null,
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(Modifier.height(12.dp))
 
             OutlinedTextField(
                 value = date,
-                onValueChange = { },
+                onValueChange = {},
                 label = { Text("Tanggal *") },
                 leadingIcon = { Icon(Icons.Default.CalendarToday, null) },
                 trailingIcon = {
                     IconButton(onClick = { datePickerDialog.show() }) {
-                        Icon(Icons.Default.EditCalendar, "Pilih Tanggal")
+                        Icon(Icons.Default.EditCalendar, contentDescription = "Pilih Tanggal")
                     }
                 },
                 isError = dateError,
                 supportingText = if (dateError) {
-                    { Text("Tanggal wajib diisi") }
+                    ({ Text("Tanggal wajib diisi") })
                 } else if (date.isNotEmpty()) {
-                    { Text("Format: ${formatDateDisplay(date)}", color = MaterialTheme.colorScheme.primary) }
+                    ({ Text("Format: ${formatDateDisplay(date)}") })
                 } else null,
                 modifier = Modifier.fillMaxWidth(),
                 readOnly = true
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(Modifier.height(12.dp))
 
             OutlinedTextField(
                 value = time,
-                onValueChange = { },
+                onValueChange = {},
                 label = { Text("Waktu *") },
                 leadingIcon = { Icon(Icons.Default.Schedule, null) },
                 trailingIcon = {
                     IconButton(onClick = { timePickerDialog.show() }) {
-                        Icon(Icons.Default.AccessTime, "Pilih Waktu")
+                        Icon(Icons.Default.AccessTime, contentDescription = "Pilih Waktu")
                     }
                 },
                 isError = timeError,
                 supportingText = if (timeError) {
-                    { Text("Waktu wajib diisi") }
+                    ({ Text("Waktu wajib diisi") })
                 } else if (time.isNotEmpty()) {
-                    { Text("Format: ${formatTimeDisplay(time)}", color = MaterialTheme.colorScheme.primary) }
+                    ({ Text("Format: ${formatTimeDisplay(time)}") })
                 } else null,
                 modifier = Modifier.fillMaxWidth(),
                 readOnly = true
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(Modifier.height(12.dp))
 
             OutlinedTextField(
                 value = location,
-                onValueChange = {
-                    location = it
-                    locationError = false
-                },
+                onValueChange = { location = it; locationError = false },
                 label = { Text("Lokasi *") },
                 leadingIcon = { Icon(Icons.Default.LocationOn, null) },
                 isError = locationError,
-                supportingText = if (locationError) { { Text("Lokasi wajib diisi") } } else null,
+                supportingText = if (locationError) ({ Text("Lokasi wajib diisi") }) else null,
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(Modifier.height(12.dp))
 
             OutlinedTextField(
                 value = description,
@@ -227,7 +217,7 @@ fun EditEventScreen(
                 maxLines = 5
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(Modifier.height(12.dp))
 
             OutlinedTextField(
                 value = capacityText,
@@ -236,15 +226,12 @@ fun EditEventScreen(
                 },
                 label = { Text("Kapasitas Peserta (opsional)") },
                 leadingIcon = { Icon(Icons.Default.People, null) },
-                supportingText = {
-                    if (capacityText.isNotEmpty()) Text("Maksimal $capacityText orang", color = MaterialTheme.colorScheme.primary)
-                },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(Modifier.height(12.dp))
 
             ExposedDropdownMenuBox(
                 expanded = expanded,
@@ -255,21 +242,12 @@ fun EditEventScreen(
                     onValueChange = {},
                     readOnly = true,
                     label = { Text("Status Event *") },
-                    leadingIcon = {
-                        Icon(
-                            when (status) {
-                                "upcoming" -> Icons.Default.Schedule
-                                "ongoing" -> Icons.Default.PlayArrow
-                                "completed" -> Icons.Default.CheckCircle
-                                "cancelled" -> Icons.Default.Cancel
-                                else -> Icons.Default.Event
-                            },
-                            null
-                        )
-                    },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                    modifier = Modifier.fillMaxWidth().menuAnchor()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor()
                 )
+
                 ExposedDropdownMenu(
                     expanded = expanded,
                     onDismissRequest = { expanded = false }
@@ -280,25 +258,13 @@ fun EditEventScreen(
                             onClick = {
                                 status = option
                                 expanded = false
-                            },
-                            leadingIcon = {
-                                Icon(
-                                    when (option) {
-                                        "upcoming" -> Icons.Default.Schedule
-                                        "ongoing" -> Icons.Default.PlayArrow
-                                        "completed" -> Icons.Default.CheckCircle
-                                        "cancelled" -> Icons.Default.Cancel
-                                        else -> Icons.Default.Event
-                                    },
-                                    null
-                                )
                             }
                         )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(Modifier.height(24.dp))
 
             Button(
                 onClick = {
@@ -334,33 +300,18 @@ fun EditEventScreen(
                     }
                 },
                 enabled = !isLoading,
-                modifier = Modifier.fillMaxWidth().height(56.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
             ) {
                 if (isLoading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                    Spacer(Modifier.width(12.dp))
                 }
                 Icon(Icons.Default.CheckCircle, null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(if (isLoading) "Menyimpan..." else "Update Event", style = MaterialTheme.typography.titleMedium)
+                Spacer(Modifier.width(8.dp))
+                Text(if (isLoading) "Menyimpan..." else "Update Event")
             }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            OutlinedButton(
-                onClick = { showDeleteDialog = true },
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
-            ) {
-                Icon(Icons.Default.Delete, null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Hapus Event", style = MaterialTheme.typography.titleMedium)
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 
@@ -369,7 +320,7 @@ fun EditEventScreen(
             onDismissRequest = { showDeleteDialog = false },
             icon = { Icon(Icons.Default.Warning, null, tint = MaterialTheme.colorScheme.error) },
             title = { Text("Hapus Event?", fontWeight = FontWeight.Bold) },
-            text = { Text("Event \"$title\" akan dihapus permanen. Tindakan ini tidak dapat dibatalkan.") },
+            text = { Text("Event \"$title\" akan dihapus permanen.") },
             confirmButton = {
                 Button(
                     onClick = {
@@ -393,7 +344,8 @@ fun EditEventScreen(
     }
 }
 
-fun getStatusLabel(status: String): String = when (status) {
+/** Helpers dibuat PRIVATE biar gak bentrok file lain (conflicting overloads hilang) */
+private fun getStatusLabel(status: String): String = when (status) {
     "upcoming" -> "Akan Datang"
     "ongoing" -> "Berlangsung"
     "completed" -> "Selesai"
@@ -401,16 +353,26 @@ fun getStatusLabel(status: String): String = when (status) {
     else -> status
 }
 
-fun formatDateDisplay(date: String): String = try {
-    val parts = date.split("-")
-    if (parts.size == 3) {
-        val months = listOf("", "Januari", "Februari", "Maret", "April", "Mei", "Juni",
-            "Juli", "Agustus", "September", "Oktober", "November", "Desember")
-        "${parts[2]} ${months[parts[1].toInt()]} ${parts[0]}"
-    } else date
-} catch (e: Exception) { date }
+private fun formatDateDisplay(date: String): String {
+    return try {
+        val parts = date.split("-")
+        if (parts.size == 3) {
+            val months = listOf(
+                "", "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+                "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+            )
+            "${parts[2]} ${months[parts[1].toInt()]} ${parts[0]}"
+        } else date
+    } catch (_: Exception) {
+        date
+    }
+}
 
-fun formatTimeDisplay(time: String): String = try {
-    val parts = time.split(":")
-    if (parts.size >= 2) "${parts[0]}:${parts[1]} WIB" else time
-} catch (e: Exception) { time }
+private fun formatTimeDisplay(time: String): String {
+    return try {
+        val parts = time.split(":")
+        if (parts.size >= 2) "${parts[0]}:${parts[1]} WIB" else time
+    } catch (_: Exception) {
+        time
+    }
+}
